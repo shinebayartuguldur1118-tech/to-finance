@@ -3,50 +3,26 @@ from datetime import datetime
 import json
 import os
 
-# =====================
-# SETTINGS
-# =====================
-
 st.set_page_config(
     page_title="T&O Finance",
     page_icon="💰",
     layout="wide"
 )
 
-# =====================
-# MENU
-# =====================
-
-st.sidebar.title("💰 T&O Finance")
-
-page = st.sidebar.selectbox(
-    "Menu",
-    [
-        "🏠 Dashboard",
-        "💵 Add Salary",
-        "🎯 Goals",
-        "📜 History",
-        "✏️ Edit Funds",
-        "⚙️ Settings"
-    ]
-)
-
-# =====================
-# FILE
-# =====================
-
 DATA_FILE = "finance_data.json"
 
-# =====================
-# FUNCTIONS
-# =====================
+# -----------------
+# SAVE / LOAD
+# -----------------
 
 def save_data():
+
     data = {
-        "savings": st.session_state.savings,
-        "education": st.session_state.education,
-        "rent": st.session_state.rent,
-        "history": st.session_state.history
+        "apartment_fund": st.session_state.apartment_fund,
+        "education_fund": st.session_state.education_fund,
+        "history": st.session_state.history,
+        "rent_paid": st.session_state.rent_paid,
+        "utilities_paid": st.session_state.utilities_paid
     }
 
     with open(DATA_FILE, "w") as f:
@@ -62,9 +38,10 @@ def load_data():
 
     return None
 
-# =====================
-# LOAD DATA
-# =====================
+
+# -----------------
+# INIT
+# -----------------
 
 loaded = load_data()
 
@@ -72,34 +49,45 @@ if "initialized" not in st.session_state:
 
     if loaded:
 
-        st.session_state.savings = loaded.get(
-            "savings", 0
+        st.session_state.apartment_fund = loaded.get(
+            "apartment_fund",
+            0
         )
 
-        st.session_state.education = loaded.get(
-            "education", 0
-        )
-
-        st.session_state.rent = loaded.get(
-            "rent", 0
+        st.session_state.education_fund = loaded.get(
+            "education_fund",
+            0
         )
 
         st.session_state.history = loaded.get(
-            "history", []
+            "history",
+            []
+        )
+
+        st.session_state.rent_paid = loaded.get(
+            "rent_paid",
+            False
+        )
+
+        st.session_state.utilities_paid = loaded.get(
+            "utilities_paid",
+            False
         )
 
     else:
 
-        st.session_state.savings = 0
-        st.session_state.education = 0
-        st.session_state.rent = 0
+        st.session_state.apartment_fund = 0
+        st.session_state.education_fund = 0
         st.session_state.history = []
+
+        st.session_state.rent_paid = False
+        st.session_state.utilities_paid = False
 
     st.session_state.initialized = True
 
-# =====================
+# -----------------
 # DATE
-# =====================
+# -----------------
 
 today = datetime.now()
 
@@ -112,7 +100,7 @@ salary_dates = [
 
 next_salary = None
 
-for person_name, day in salary_dates:
+for person, day in salary_dates:
 
     salary_date = datetime(
         today.year,
@@ -123,9 +111,10 @@ for person_name, day in salary_dates:
     if salary_date > today:
 
         next_salary = (
-            person_name,
+            person,
             salary_date
         )
+
         break
 
 if next_salary is None:
@@ -143,42 +132,119 @@ person_name, payday = next_salary
 
 days_left = (payday - today).days
 
-# =====================
+# -----------------
+# AUTO RESET
+# -----------------
+
+if today.day >= 5:
+    st.session_state.utilities_paid = False
+
+if today.month % 2 == 1 and today.day >= 10:
+    st.session_state.rent_paid = False
+
+# -----------------
+# MENU
+# -----------------
+
+page = st.sidebar.selectbox(
+    "Menu",
+    [
+        "🏠 Dashboard",
+        "🏦 Savings",
+        "💵 Add Salary",
+        "📜 History",
+        "⚙️ Settings"
+    ]
+)
+
+# -----------------
 # DASHBOARD
-# =====================
+# -----------------
 
 if page == "🏠 Dashboard":
 
-    st.title("💰 Tuguldur & Oyuki Finance")
-    st.markdown(
+    total_savings = (
+        st.session_state.apartment_fund +
+        st.session_state.education_fund
+    )
+
+    st.title("💰 T&O Finance")
+
+    st.write(
         f"### 📅 {today.strftime('%d %B %Y')}"
     )
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
+
         st.metric(
-            "🏦 Savings",
-            f"{st.session_state.savings:,.0f} ₮"
+            "🏦 Total Savings",
+            f"{total_savings:,.0f} ₮"
         )
 
     with col2:
-        st.metric(
-            "🎓 Education Fund",
-            f"{st.session_state.education:,.0f} ₮"
-        )
 
-    
-    with col3:
         st.metric(
-             "⏰ Next Salary",
+            "⏰ Next Salary",
             f"{person_name} ({days_left} days)"
         )
 
+    st.divider()
 
-# =====================
+    st.subheader(
+        "✅ Checklist"
+    )
+
+    st.checkbox(
+        "🏠 Rent Paid",
+        key="rent_paid"
+    )
+
+    st.checkbox(
+        "⚡ Utilities Paid",
+        key="utilities_paid"
+    )
+
+    save_data()
+
+# -----------------
+# SAVINGS
+# -----------------
+
+elif page == "🏦 Savings":
+
+    st.title("🏦 Savings")
+
+    total_savings = (
+        st.session_state.apartment_fund +
+        st.session_state.education_fund
+    )
+
+    st.metric(
+        "🏦 Total Savings",
+        f"{total_savings:,.0f} ₮"
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.metric(
+            "🏠 Apartment Fund",
+            f"{st.session_state.apartment_fund:,.0f} ₮"
+        )
+
+    with col2:
+
+        st.metric(
+            "🎓 Education Fund",
+            f"{st.session_state.education_fund:,.0f} ₮"
+        )
+
+# -----------------
 # ADD SALARY
-# =====================
+# -----------------
 
 elif page == "💵 Add Salary":
 
@@ -195,197 +261,195 @@ elif page == "💵 Add Salary":
         step=100000
     )
 
-    if st.button("Add Salary"):
+    st.subheader("Allocation")
 
-        original_salary = salary
+    apartment = st.number_input(
+        "🏠 Apartment Fund",
+        min_value=0,
+        step=50000
+    )
 
-        if person == "Oyuki":
+    education = st.number_input(
+        "🎓 Education Fund",
+        min_value=0,
+        step=50000
+    )
 
-            education = 500000
+    food = st.number_input(
+        "🍔 Food",
+        min_value=0,
+        step=50000
+    )
 
-            savings = max(
-                salary - 1000000,
-                0
-            )
+    utilities = st.number_input(
+        "⚡ Utilities & Internet",
+        min_value=0,
+        step=50000
+    )
 
-            st.session_state.education += education
-            st.session_state.savings += savings
+    fuel = st.number_input(
+        "⛽ Fuel",
+        min_value=0,
+        step=50000
+    )
 
-            st.success(
-                f"🎓 Education +500,000 ₮"
-            )
+    date_fund = st.number_input(
+        "💕 Date",
+        min_value=0,
+        step=50000
+    )
 
-            st.success(
-                f"🏦 Savings +{savings:,.0f} ₮"
-            )
+    other = st.number_input(
+        "📦 Other",
+        min_value=0,
+        step=50000
+    )
 
-        else:
+    allocated = (
+        apartment +
+        education +
+        food +
+        utilities +
+        fuel +
+        date_fund +
+        other
+    )
 
-            rent_needed = max(
-                0,
-                3200000 - st.session_state.rent
-            )
-
-            rent_add = min(
-                salary,
-                rent_needed
-            )
-
-            st.session_state.rent += rent_add
-
-            salary -= rent_add
-
-            st.session_state.savings += salary
-
-            st.success(
-                f"🏠 Rent Fund +{rent_add:,.0f} ₮"
-            )
-
-            st.success(
-                f"🏦 Savings +{salary:,.0f} ₮"
-            )
-
-        st.session_state.history.append(
-            {
-                "date": today.strftime("%Y-%m-%d"),
-                "person": person,
-                "amount": original_salary
-            }
-        )
-
-        save_data()
-
-        st.rerun()
-
-# =====================
-# GOALS
-# =====================
-
-elif page == "🎯 Goals":
-
-    st.title("🎯 Apartment Goal")
-
-    goal = 50000000
-
-    progress = st.session_state.savings / goal
-
-    if progress > 1:
-        progress = 1
-
-    st.progress(progress)
+    remaining = salary - allocated
 
     st.write(
-        f"{st.session_state.savings:,.0f} ₮ / {goal:,.0f} ₮"
+        f"### Allocated: {allocated:,.0f} ₮"
     )
 
-# =====================
-# HISTORY
-# =====================
-
-elif page == "📜 History":
-
-    st.title("📜 Salary History")
-
-    if len(st.session_state.history) == 0:
-
-        st.info("No salary records yet.")
-
-    else:
-
-        for i in range(
-            len(st.session_state.history) - 1,
-            -1,
-            -1
-        ):
-
-            row = st.session_state.history[i]
-
-            col1, col2 = st.columns([8, 1])
-
-            with col1:
-
-                st.write(
-                    f"📅 {row['date']} | "
-                    f"👤 {row['person']} | "
-                    f"💰 {row['amount']:,.0f} ₮"
-                )
-
-            with col2:
-
-                if st.button(
-                    "❌",
-                    key=f"delete_{i}"
-                ):
-
-                    st.session_state.history.pop(i)
-
-                    save_data()
-
-                    st.rerun()
-
-# =====================
-# EDIT FUNDS
-# =====================
-
-elif page == "✏️ Edit Funds":
-
-    st.title("✏️ Edit Funds")
-
-    new_savings = st.number_input(
-        "Savings",
-        value=float(st.session_state.savings),
-        step=100000.0
+    st.write(
+        f"### Remaining: {remaining:,.0f} ₮"
     )
 
-    new_education = st.number_input(
-        "Education Fund",
-        value=float(st.session_state.education),
-        step=100000.0
-    )
+    if st.button("Save Salary"):
 
-    new_rent = st.number_input(
-        "Rent Fund",
-        value=float(st.session_state.rent),
-        step=100000.0
-    )
+        st.session_state.apartment_fund += apartment
+        st.session_state.education_fund += education
 
-    if st.button("💾 Save Changes"):
+        st.session_state.history.append({
 
-        st.session_state.savings = new_savings
-        st.session_state.education = new_education
-        st.session_state.rent = new_rent
+            "date":
+            today.strftime("%Y-%m-%d"),
+
+            "person":
+            person,
+
+            "salary":
+            salary,
+
+            "apartment":
+            apartment,
+
+            "education":
+            education,
+
+            "food":
+            food,
+
+            "utilities":
+            utilities,
+
+            "fuel":
+            fuel,
+
+            "date_fund":
+            date_fund,
+
+            "other":
+            other
+
+        })
 
         save_data()
 
         st.success(
-            "✅ Data updated successfully!"
+            "✅ Salary saved"
         )
 
         st.rerun()
 
-# =====================
+# -----------------
+# HISTORY
+# -----------------
+
+elif page == "📜 History":
+
+    st.title("📜 History")
+
+    if len(st.session_state.history) == 0:
+
+        st.info(
+            "No history yet."
+        )
+
+    else:
+
+        for row in reversed(
+            st.session_state.history
+        ):
+
+            with st.expander(
+                f"{row['date']} | {row['person']}"
+            ):
+
+                st.write(
+                    f"Salary: {row['salary']:,.0f} ₮"
+                )
+
+                st.write(
+                    f"🏠 Apartment: {row['apartment']:,.0f} ₮"
+                )
+
+                st.write(
+                    f"🎓 Education: {row['education']:,.0f} ₮"
+                )
+
+                st.write(
+                    f"🍔 Food: {row['food']:,.0f} ₮"
+                )
+
+                st.write(
+                    f"⚡ Utilities: {row['utilities']:,.0f} ₮"
+                )
+
+                st.write(
+                    f"⛽ Fuel: {row['fuel']:,.0f} ₮"
+                )
+
+                st.write(
+                    f"💕 Date: {row['date_fund']:,.0f} ₮"
+                )
+
+                st.write(
+                    f"📦 Other: {row['other']:,.0f} ₮"
+                )
+
+# -----------------
 # SETTINGS
-# =====================
+# -----------------
 
 elif page == "⚙️ Settings":
 
     st.title("⚙️ Settings")
 
-    st.warning(
-        "This will delete all saved data."
-    )
+    if st.button(
+        "🗑 Reset All Data"
+    ):
 
-    if st.button("🗑 Reset All Data"):
-
-        st.session_state.savings = 0
-        st.session_state.education = 0
-        st.session_state.rent = 0
+        st.session_state.apartment_fund = 0
+        st.session_state.education_fund = 0
         st.session_state.history = []
+        st.session_state.rent_paid = False
+        st.session_state.utilities_paid = False
 
         save_data()
 
         st.success(
-            "✅ All data has been reset."
+            "All data reset."
         )
 
         st.rerun()
