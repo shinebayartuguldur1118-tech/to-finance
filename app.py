@@ -264,7 +264,7 @@ page = st.sidebar.selectbox(
 
 if page == "🏠 Dashboard":
     next_rent_due = get_next_rent_due()
-
+    st.image("our_photo.jpg", use_container_width=True)
     st.title("💰 T&O Finance")
 
     current_month_income = 0
